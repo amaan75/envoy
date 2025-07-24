@@ -1566,6 +1566,24 @@ TEST_P(RedisProxyIntegrationTest, UnwatchWithTransactionNoOp) {
   redis_client->close();
 }
 
+TEST_P(RedisProxyIntegrationTest, ClientSetname) {
+  initialize();
+  simpleProxyResponse(makeBulkStringArray({"client", "setname", "myconnection"}), "+OK\r\n");
+}
+
+TEST_P(RedisProxyIntegrationTest, ClientSetnameInvalidArgs) {
+  initialize();
+  std::stringstream error_response;
+  error_response << "-" << RedisCmdSplitter::Response::get().InvalidRequest << "\r\n";
+  simpleProxyResponse(makeBulkStringArray({"client", "setname"}), error_response.str());
+}
+
+TEST_P(RedisProxyIntegrationTest, ClientUnsupportedSubcommand) {
+  initialize();
+  simpleProxyResponse(makeBulkStringArray({"client", "getname"}),
+                      "-ERR unknown command 'client getname', with args beginning with: \r\n");
+}
+
 TEST_P(RedisProxyIntegrationTest, WatchUnwatchNoTransaction) {
   initialize();
   IntegrationTcpClientPtr redis_client = makeTcpConnection(lookupPort("redis_proxy"));
