@@ -604,6 +604,70 @@ TEST_F(RedisSingleServerRequestTest, SelectInvalid) {
   EXPECT_EQ(nullptr, handle_);
 };
 
+TEST_F(RedisSingleServerRequestTest, ClientSetname) {
+  InSequence s;
+
+  Common::Redis::RespValuePtr request{new Common::Redis::RespValue()};
+  makeBulkStringArray(*request, {"client", "setname", "myconnection"});
+
+  Common::Redis::RespValue response;
+  response.type(Common::Redis::RespType::SimpleString);
+  response.asString() = Response::get().OK;
+
+  EXPECT_CALL(callbacks_, connectionAllowed()).WillOnce(Return(true));
+  EXPECT_CALL(callbacks_, onResponse_(PointeesEq(&response)));
+  handle_ = splitter_.makeRequest(std::move(request), callbacks_, dispatcher_, stream_info_);
+  EXPECT_EQ(nullptr, handle_);
+};
+
+TEST_F(RedisSingleServerRequestTest, ClientSetnameInvalid) {
+  InSequence s;
+
+  Common::Redis::RespValuePtr request{new Common::Redis::RespValue()};
+  makeBulkStringArray(*request, {"client", "setname"});
+
+  Common::Redis::RespValue response;
+  response.type(Common::Redis::RespType::Error);
+  response.asString() = RedisProxy::CommandSplitter::Response::get().InvalidRequest;
+
+  EXPECT_CALL(callbacks_, connectionAllowed()).WillOnce(Return(true));
+  EXPECT_CALL(callbacks_, onResponse_(PointeesEq(&response)));
+  handle_ = splitter_.makeRequest(std::move(request), callbacks_, dispatcher_, stream_info_);
+  EXPECT_EQ(nullptr, handle_);
+};
+
+TEST_F(RedisSingleServerRequestTest, ClientUnsupportedSubcommand) {
+  InSequence s;
+
+  Common::Redis::RespValuePtr request{new Common::Redis::RespValue()};
+  makeBulkStringArray(*request, {"client", "getname"});
+
+  Common::Redis::RespValue response;
+  response.type(Common::Redis::RespType::Error);
+  response.asString() = "ERR unknown command 'client getname', with args beginning with: ";
+
+  EXPECT_CALL(callbacks_, connectionAllowed()).WillOnce(Return(true));
+  EXPECT_CALL(callbacks_, onResponse_(PointeesEq(&response)));
+  handle_ = splitter_.makeRequest(std::move(request), callbacks_, dispatcher_, stream_info_);
+  EXPECT_EQ(nullptr, handle_);
+};
+
+TEST_F(RedisSingleServerRequestTest, ClientNoSubcommand) {
+  InSequence s;
+
+  Common::Redis::RespValuePtr request{new Common::Redis::RespValue()};
+  makeBulkStringArray(*request, {"client"});
+
+  Common::Redis::RespValue response;
+  response.type(Common::Redis::RespType::Error);
+  response.asString() = RedisProxy::CommandSplitter::Response::get().InvalidRequest;
+
+  EXPECT_CALL(callbacks_, connectionAllowed()).WillOnce(Return(true));
+  EXPECT_CALL(callbacks_, onResponse_(PointeesEq(&response)));
+  handle_ = splitter_.makeRequest(std::move(request), callbacks_, dispatcher_, stream_info_);
+  EXPECT_EQ(nullptr, handle_);
+};
+
 TEST_F(RedisSingleServerRequestTest, Hello) {
   InSequence s;
 
