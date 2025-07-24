@@ -842,6 +842,33 @@ SplitRequestPtr InstanceImpl::makeRequest(Common::Redis::RespValuePtr&& request,
     return nullptr;
   }
 
+  if (command_name == Common::Redis::SupportedCommands::client()) {
+    // Handle CLIENT command locally.
+    if (request->asArray().size() < 2) {
+      onInvalidRequest(callbacks);
+      return nullptr;
+    }
+    
+    std::string subcommand = absl::AsciiStrToLower(request->asArray()[1].asString());
+    if (subcommand == "setname") {
+      // CLIENT SETNAME command - respond with OK
+      if (request->asArray().size() != 3) {
+        onInvalidRequest(callbacks);
+        return nullptr;
+      }
+      localResponse(callbacks, "OK");
+      return nullptr;
+    } else {
+      // Unsupported CLIENT subcommand
+      callbacks.onResponse(Common::Redis::Utility::makeError(fmt::format(
+          "ERR unknown command '{} {}', with args beginning with: {}", 
+          request->asArray()[0].asString(),
+          request->asArray()[1].asString(),
+          request->asArray().size() > 2 ? request->asArray()[2].asString() : "")));
+      return nullptr;
+    }
+  }
+
   if (command_name == Common::Redis::SupportedCommands::quit()) {
     callbacks.onQuit();
     return nullptr;

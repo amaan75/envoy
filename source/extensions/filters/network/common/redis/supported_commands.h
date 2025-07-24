@@ -22,7 +22,7 @@ struct SupportedCommands {
     CONSTRUCT_ON_FIRST_USE(
         absl::flat_hash_set<std::string>, "append", "bf.add", "bf.card", "bf.exists", "bf.info",
         "bf.insert", "bf.loadchunk", "bf.madd", "bf.mexists", "bf.reserve", "bf.scandump",
-        "bitcount", "bitfield", "bitpos", "decr", "decrby", "dump", "expire", "expireat", "geoadd",
+        "bitcount", "bitfield", "bitpos", "client", "decr", "decrby", "dump", "expire", "expireat", "geoadd",
         "geodist", "geohash", "geopos", "georadius_ro", "georadiusbymember_ro", "get", "getbit",
         "getdel", "getrange", "getset", "hdel", "hexists", "hget", "hgetall", "hincrby",
         "hincrbyfloat", "hkeys", "hlen", "hmget", "hmset", "hscan", "hset", "hsetnx", "hstrlen",
@@ -71,6 +71,11 @@ struct SupportedCommands {
    * @return auth command
    */
   static const std::string& auth() { CONSTRUCT_ON_FIRST_USE(std::string, "auth"); }
+
+  /**
+   * @return client command
+   */
+  static const std::string& client() { CONSTRUCT_ON_FIRST_USE(std::string, "client"); }
 
   /**
    * @return echo command
