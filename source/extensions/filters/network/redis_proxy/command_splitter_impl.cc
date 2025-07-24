@@ -842,7 +842,7 @@ SplitRequestPtr InstanceImpl::makeRequest(Common::Redis::RespValuePtr&& request,
     return nullptr;
   }
 
-  if (command_name == "client") {
+  if (command_name == Common::Redis::SupportedCommands::client()) {
     // Handle CLIENT command locally.
     if (request->asArray().size() < 2) {
       onInvalidRequest(callbacks);
