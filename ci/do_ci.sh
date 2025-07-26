@@ -582,7 +582,7 @@ case $CI_TARGET in
         ENVOY_TARBALL_DIR="${ENVOY_TARBALL_DIR:-${ENVOY_ARCH_DIR}}"
         _PLATFORMS=()
         PLATFORM_NAMES=(
-            x64:linux/amd64
+            # x64:linux/amd64
             arm64:linux/arm64)
         # TODO(phlax): avoid copying bins
         for platform_name in "${PLATFORM_NAMES[@]}"; do
