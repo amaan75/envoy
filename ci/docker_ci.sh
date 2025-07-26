@@ -93,7 +93,7 @@ config_env() {
 }
 
 # "-google-vrp" must come afer "" to ensure we rebuild the local base image dependency.
-BUILD_TYPES=("" "-debug" "-contrib" "-contrib-debug" "-distroless" "-google-vrp" "-tools")
+BUILD_TYPES=("" "-debug" "-contrib" "-contrib-debug" "-distroless"  "-tools")
 
 # Configure docker-buildx tools
 BUILD_COMMAND=("buildx" "build")
