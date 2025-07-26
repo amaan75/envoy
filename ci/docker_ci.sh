@@ -23,7 +23,7 @@ set -e
 # Workaround for https://github.com/envoyproxy/envoy/issues/26634
 DOCKER_BUILD_TIMEOUT="${DOCKER_BUILD_TIMEOUT:-500}"
 
-DOCKER_PLATFORM="${DOCKER_PLATFORM:-linux/arm64}"
+DOCKER_PLATFORM="linux/arm64"
 
 if [[ -n "$DOCKER_CI_DRYRUN" ]]; then
     CI_SHA1="${CI_SHA1:-MOCKSHA}"
