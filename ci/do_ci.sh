@@ -608,6 +608,7 @@ case $CI_TARGET in
         if [[ -z "${DOCKERHUB_PASSWORD}" && "${#_PLATFORMS[@]}" -eq 1 && -z $ENVOY_DOCKER_SAVE_IMAGE ]]; then
             # if you are not pushing the images and there is only one platform
             # then load to Docker (ie local build)
+            echo "local build, loading images to Docker"
             export DOCKER_LOAD_IMAGES=1
         fi
         "${ENVOY_SRCDIR}/ci/docker_ci.sh"
