@@ -55,14 +55,15 @@ else
   SOURCE_DIR_MOUNT_DEST=/source
   ENVOY_DOCKER_SOURCE_DIR="${ENVOY_DOCKER_SOURCE_DIR:-${SOURCE_DIR_MOUNT_DEST}}"
   START_COMMAND=(
-      "/bin/bash"
-      "-lc"
-      "groupadd ${DOCKER_GROUP_ARGS[*]} -f envoygroup \
-          && useradd -o --uid ${USER_UID} ${DOCKER_USER_ARGS[*]} --no-create-home --home-dir /build envoybuild \
-          && usermod -a -G pcap envoybuild \
-          && chown envoybuild:envoygroup /build \
-          && chown envoybuild /proc/self/fd/2 \
-          && sudo -EHs -u envoybuild bash -c 'cd ${ENVOY_DOCKER_SOURCE_DIR} && $*'")
+    "/bin/bash"
+    "-lc"
+    "if [[ -n \"\${DOCKERHUB_USERNAME}\" && -n \"\${DOCKERHUB_PASSWORD}\" ]]; then echo \"\${DOCKERHUB_PASSWORD}\" | docker login -u \"\${DOCKERHUB_USERNAME}\" --password-stdin; fi \
+        && groupadd ${DOCKER_GROUP_ARGS[*]} -f envoygroup \
+        && useradd -o --uid ${USER_UID} ${DOCKER_USER_ARGS[*]} --no-create-home --home-dir /build envoybuild \
+        && usermod -a -G pcap envoybuild \
+        && chown envoybuild:envoygroup /build \
+        && chown envoybuild /proc/self/fd/2 \
+        && sudo -EHs -u envoybuild bash -c 'cd ${ENVOY_DOCKER_SOURCE_DIR} && $*'")
 fi
 
 if [[ -n "$ENVOY_DOCKER_PLATFORM" ]]; then
