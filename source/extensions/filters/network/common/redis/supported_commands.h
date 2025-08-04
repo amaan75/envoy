@@ -29,7 +29,7 @@ struct SupportedCommands {
         "hvals", "incr", "incrby", "incrbyfloat", "lindex", "linsert", "llen", "lmove", "lpop",
         "lpush", "lpushx", "lrange", "lrem", "lset", "ltrim", "persist", "pexpire", "pexpireat",
         "pfadd", "pfcount", "psetex", "pttl", "publish", "restore", "rpop", "rpush", "rpushx",
-        "sadd", "scard", "set", "setbit", "setex", "setnx", "setrange", "sismember", "smembers",
+        "sadd", "scan", "scard", "set", "setbit", "setex", "setnx", "setrange", "sismember", "smembers",
         "spop", "srandmember", "srem", "sscan", "strlen", "ttl", "type", "xack", "xadd",
         "xautoclaim", "xclaim", "xdel", "xlen", "xpending", "xrange", "xrevrange", "xtrim", "zadd",
         "zcard", "zcount", "zincrby", "zlexcount", "zpopmin", "zpopmax", "zrange", "zrangebylex",

@@ -305,6 +305,26 @@ private:
 };
 
 /**
+ * ScanRequest sends the SCAN command to all Redis servers. The response from each Redis
+ * (which must be a 2-element array [cursor, keys]) is merged and returned to the user.
+ * The cursor is set to "0" when all shards return "0", indicating the scan is complete.
+ */
+class ScanRequest : public FragmentedRequest {
+public:
+  static SplitRequestPtr create(Router& router, Common::Redis::RespValuePtr&& incoming_request,
+                                SplitCallbacks& callbacks, CommandStats& command_stats,
+                                TimeSource& time_source, bool delay_command_latency,
+                                const StreamInfo::StreamInfo& stream_info);
+
+private:
+  ScanRequest(SplitCallbacks& callbacks, CommandStats& command_stats, TimeSource& time_source,
+              bool delay_command_latency)
+      : FragmentedRequest(callbacks, command_stats, time_source, delay_command_latency) {}
+  // RedisProxy::CommandSplitter::FragmentedRequest
+  void onChildResponse(Common::Redis::RespValuePtr&& value, uint32_t index) override;
+};
+
+/**
  * SplitKeysSumResultRequest takes each key from the command and sends the same incoming command
  * with each key to the appropriate Redis server. The response from each Redis (which must be an
  * integer) is summed and returned to the user. If there is any error or failure in processing the
@@ -412,6 +432,7 @@ private:
   CommandHandlerFactory<MGETRequest> mget_handler_;
   CommandHandlerFactory<MSETRequest> mset_handler_;
   CommandHandlerFactory<KeysRequest> keys_handler_;
+  CommandHandlerFactory<ScanRequest> scan_handler_;
   CommandHandlerFactory<SplitKeysSumResultRequest> split_keys_sum_result_handler_;
   CommandHandlerFactory<TransactionRequest> transaction_handler_;
   TrieLookupTable<HandlerDataPtr> handler_lookup_table_;
