@@ -1278,6 +1278,68 @@ TEST_F(KeysHandlerTest, KeysWrongNumberOfArgs) {
 
 INSTANTIATE_TEST_SUITE_P(KeysHandlerTest, KeysHandlerTest, testing::Values("keys"));
 
+class ScanHandlerTest : public FragmentedRequestCommandHandlerTest,
+                        public testing::WithParamInterface<std::string> {
+public:
+  void setup(uint16_t shard_size, const std::list<uint64_t>& null_handle_indexes,
+             bool mirrored = false) {
+    std::vector<std::string> request_strings = {"scan", "0"};
+    makeRequestToShard(shard_size, request_strings, null_handle_indexes, mirrored);
+  }
+
+  Common::Redis::RespValuePtr response() {
+    Common::Redis::RespValuePtr response = std::make_unique<Common::Redis::RespValue>();
+    response->type(Common::Redis::RespType::Array);
+    response->asArray().resize(2);
+    // Set cursor to "0"
+    response->asArray()[0].type(Common::Redis::RespType::BulkString);
+    response->asArray()[0].asString() = "0";
+    // Set keys array
+    response->asArray()[1].type(Common::Redis::RespType::Array);
+    return response;
+  }
+};
+
+TEST_P(ScanHandlerTest, Success) {
+  InSequence s;
+
+  setup(1, {});
+  EXPECT_NE(nullptr, handle_);
+
+  Common::Redis::RespValuePtr shard_response = response();
+  shard_response->asArray()[1].asArray().resize(2);
+  shard_response->asArray()[1].asArray()[0].type(Common::Redis::RespType::BulkString);
+  shard_response->asArray()[1].asArray()[0].asString() = "key1";
+  shard_response->asArray()[1].asArray()[1].type(Common::Redis::RespType::BulkString);
+  shard_response->asArray()[1].asArray()[1].asString() = "key2";
+
+  EXPECT_CALL(callbacks_, onResponse_(_))
+      .WillOnce(Invoke([](Common::Redis::RespValuePtr&& response) {
+        EXPECT_EQ(2, response->asArray().size());
+        EXPECT_EQ("0", response->asArray()[0].asString());
+        EXPECT_EQ(2, response->asArray()[1].asArray().size());
+        EXPECT_EQ("key1", response->asArray()[1].asArray()[0].asString());
+        EXPECT_EQ("key2", response->asArray()[1].asArray()[1].asString());
+      }));
+  pool_callbacks_[0]->onResponse(std::move(shard_response));
+}
+
+TEST_P(ScanHandlerTest, ScanWrongNumberOfArguments) {
+  Common::Redis::RespValuePtr request1{new Common::Redis::RespValue()};
+  Common::Redis::RespValuePtr request2{new Common::Redis::RespValue()};
+  Common::Redis::RespValue response;
+  response.type(Common::Redis::RespType::Error);
+
+  response.asString() = "wrong number of arguments for 'scan' command";
+  EXPECT_CALL(callbacks_, connectionAllowed()).WillOnce(Return(true));
+  EXPECT_CALL(callbacks_, onResponse_(PointeesEq(&response)));
+  makeBulkStringArray(*request1, {"scan"});
+  EXPECT_EQ(nullptr,
+            splitter_.makeRequest(std::move(request1), callbacks_, dispatcher_, stream_info_));
+};
+
+INSTANTIATE_TEST_SUITE_P(ScanHandlerTest, ScanHandlerTest, testing::Values("scan"));
+
 class RedisSplitKeysSumResultHandlerTest : public FragmentedRequestCommandHandlerTest,
                                            public testing::WithParamInterface<std::string> {
 public:
