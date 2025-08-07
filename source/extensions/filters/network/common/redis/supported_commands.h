@@ -118,6 +118,11 @@ struct SupportedCommands {
   static const std::string& select() { CONSTRUCT_ON_FIRST_USE(std::string, "select"); }
 
   /**
+   * @return scan command
+   */
+  static const std::string& scan() { CONSTRUCT_ON_FIRST_USE(std::string, "scan"); }
+
+  /**
    * @return commands which alters the state of redis
    */
   static const absl::flat_hash_set<std::string>& writeCommands() {
