@@ -494,7 +494,7 @@ SplitRequestPtr ScanKeysRequest::create(Router& router, Common::Redis::RespValue
                                     SplitCallbacks& callbacks, CommandStats& command_stats,
                                     TimeSource& time_source, bool delay_command_latency,
                                     const StreamInfo::StreamInfo& stream_info) {
-  if (incoming_request->asArray().size() != 2) {
+  if (incoming_request->asArray().size() < 2 || incoming_request->asArray().size() > 8) {
     onWrongNumberOfArguments(callbacks, *incoming_request);
     command_stats.error_.inc();
     return nullptr;
