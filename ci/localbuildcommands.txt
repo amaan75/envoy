@@ -1,0 +1,16 @@
+  447  screen -ls
+  448  screen -r envoy-build
+  473  ENVOY_DOCKER_BUILD_DIR=~/envoy-build ENVOY_DOCKER_IN_DOCKER=1 DOCKERHUB_USERNAME=amaan75 ./ci/run_envoy_docker.sh './ci/do_ci.sh release.server_only'
+  479  ENVOY_DOCKER_BUILD_DIR=~/envoy-build  DOCKERHUB_USERNAME=amaan75 ./ci/run_envoy_docker.sh './ci/do_ci.sh release.server_only'
+  482  ENVOY_DOCKER_BUILD_DIR=~/envoy-build  DOCKERHUB_USERNAME=amaan75 ./ci/run_envoy_docker.sh './ci/do_ci.sh release.server_only'
+  483  ENVOY_DOCKER_BUILD_DIR=~/envoy-build ENVOY_DOCKER_IN_DOCKER=1 DOCKERHUB_USERNAME=amaan75 ./ci/run_envoy_docker.sh './ci/do_ci.sh docker'
+  485  ENVOY_DOCKER_BUILD_DIR=~/envoy-build ENVOY_DOCKER_IN_DOCKER=1 DOCKERHUB_USERNAME=amaan75 ./ci/run_envoy_docker.sh './ci/do_ci.sh docker'
+  486  docker images
+  488  docker tag envoyproxy/envoy:v1.34.6 amaan75/envoy-proxy:v1.34.6
+  489  docker tag envoyproxy/envoy-debug:v1.34.5 amaan75/envoy-proxy-debug:v1.34.6
+  490  docker tag envoyproxy/envoy-debug:v1.34.6 amaan75/envoy-proxy-debug:v1.34.6
+  491  docker tag envoyproxy/envoy:v1.34.6 amaan75/envoy-proxy:v1.34.6
+  492  docker tag envoyproxy/envoy-debug:v1.34.6 amaan75/envoy-proxy-debug:v1.34.6
+  493  docker push amaan75/envoy-proxy-debug:v1.34.6
+  494  docker push amaan75/envoy-proxy:v1.34.6
+  495  docker images
