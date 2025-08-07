@@ -500,7 +500,7 @@ SplitRequestPtr ScanKeysRequest::create(Router& router, Common::Redis::RespValue
     return nullptr;
   }
   // Create a KEYS request with the pattern from index 3
-  Common::Redis::RespValuePtr keys_request = std::make_shared<Common::Redis::RespValue>();
+  Common::Redis::RespValuePtr keys_request = std::make_unique<Common::Redis::RespValue>();
   keys_request->type(Common::Redis::RespType::Array);
   std::vector<Common::Redis::RespValue> keys_array(2);
   keys_array[0].type(Common::Redis::RespType::BulkString);
@@ -545,7 +545,7 @@ SplitRequestPtr ScanKeysRequest::create(Router& router, Common::Redis::RespValue
     ENVOY_LOG(debug, "scan keys request shard index {}: {}", shard_index, base_request->toString());
     pending_request.handle_ =
         makeFragmentedRequestToShard(route, base_request->asArray()[0].asString(), shard_index,
-                                     keys_request, pending_request, callbacks.transaction());
+                                     *keys_request, pending_request, callbacks.transaction());
 
     if (!pending_request.handle_) {
       pending_request.onResponse(Common::Redis::Utility::makeError(Response::get().NoUpstreamHost));
