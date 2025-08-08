@@ -619,7 +619,12 @@ SplitRequestPtr ScanRequest::create(Router& router, Common::Redis::RespValuePtr&
     shard_index = std::stoul(shard_index_str);
     // strip the cursor of the shard index
     incoming_request->asArray()[1].asString() = cursor.substr(0, pos);
-     ENVOY_LOG(debug, "Stripped cursor: {}", incoming_request->asArray()[1].asString());
+    const auto stripped_cursor = incoming_request->asArray()[1].asString();
+    //stripped cursor is 0, that means the scan is complete for this shard, so we should increment the shard index
+    if(stripped_cursor == "0"){
+      shard_index++;
+    }
+    ENVOY_LOG(debug, "Stripped cursor: {} shard_index: {}", stripped_cursor, shard_index);
   }
   // For routing, use empty string since SCAN doesn't target a specific key
   std::string empty_key = "";
@@ -675,7 +680,7 @@ SplitRequestPtr ScanRequest::create(Router& router, Common::Redis::RespValuePtr&
  * The expected response format is [cursor, [keys]].
  * The scan is complete when index + 1 == shardsize_ and the cursor is "0".
  * otherwise, when an individual shard returns a "0" cursor, it means that the scan is complete for the shard and the response modify the cursor string and send 
- * back :: <shard_index>. as the cursor to the client via the pending_response_.
+ * back ::<shard_index> as the cursor to the client via the pending_response_.
  */
 void ScanRequest::onChildResponse(Common::Redis::RespValuePtr&& value, uint32_t index) {
   pending_requests_[index].handle_ = nullptr;
@@ -685,28 +690,23 @@ void ScanRequest::onChildResponse(Common::Redis::RespValuePtr&& value, uint32_t 
     if (value->asArray().size() == 2 && 
         value->asArray()[1].type() == Common::Redis::RespType::Array) {
       if (isScanCompleteForCluster(index, value)) {
+            ENVOY_LOG(debug, "scan complete for cluster: shard_index: {}", index);
         // time to terminate the scan
         pending_response_->asArray()[0].asString() = "0"; // Set cursor to "0" to indicate completion
       }else{
-        // If the scan is not complete, set the cursor to the next index
-     
-    pending_response_->asArray()[0].asString()= value->asArray()[0].asString()+"::" + std::to_string(index);
+        // If the scan is not complete, set the cursor the value of the cursor + "::<shard_index>"
+       
+const auto redis_response_cursor = value->asArray()[0].asString();
+    pending_response_->asArray()[0].asString()= redis_response_cursor + "::" + std::to_string(index);
+         ENVOY_LOG(debug, "scan processed for cursor {}: shard_index: {}", redis_response_cursor, index);
       }
    
     pending_response_->asArray()[1].asArray().insert(pending_response_->asArray()[1].asArray().end(),
                                         value->asArray().begin(), value->asArray().end());
       
-      // If any shard returns a non-zero cursor, set our cursor to non-zero
-      if (value->asArray()[0].type() == Common::Redis::RespType::BulkString &&
-          value->asArray()[0].asString() != "0") {
-        pending_response_->asArray()[0].asString() = std::to_string(index + 1);
-      }
+   
       
-      // Merge the keys from this shard
-      const auto& keys = value->asArray()[1].asArray();
-      pending_response_->asArray()[1].asArray().insert(
-          pending_response_->asArray()[1].asArray().end(),
-          keys.begin(), keys.end());
+  
     } else {
       error_count_++;
     }
@@ -728,6 +728,10 @@ void ScanRequest::onChildResponse(Common::Redis::RespValuePtr&& value, uint32_t 
           fmt::format("finished with {} error(s)", error_count_)));
     }
   }
+}
+bool ScanRequest::isScanCompleteForShard(
+    uint32_t index, Envoy::Extensions::NetworkFilters::Common::Redis::RespValuePtr&& value) {
+  return value->asArray()[0].asString() == "0";
 }
 
 bool ScanRequest::isScanCompleteForCluster(
