@@ -639,6 +639,7 @@ SplitRequestPtr ScanRequest::create(Router& router, Common::Redis::RespValuePtr&
 
   std::unique_ptr<ScanRequest> request_ptr{
       new ScanRequest(callbacks, command_stats, time_source, delay_command_latency)};
+  request_ptr->shardsize_ = shard_size;
   request_ptr->num_pending_responses_ = 1;
   request_ptr->pending_requests_.reserve(request_ptr->num_pending_responses_);
 
@@ -689,7 +690,9 @@ void ScanRequest::onChildResponse(Common::Redis::RespValuePtr&& value, uint32_t 
     // Expected response format: [cursor, [keys]]
     if (value->asArray().size() == 2 && 
         value->asArray()[1].type() == Common::Redis::RespType::Array) {
-      if (isScanCompleteForCluster(index, value)) {
+      // Create a copy of the value to pass to the function
+      Common::Redis::RespValuePtr value_copy = std::make_unique<Common::Redis::RespValue>(*value);
+      if (isScanCompleteForCluster(index, std::move(value_copy))) {
             ENVOY_LOG(debug, "scan complete for cluster: shard_index: {}", index);
         // time to terminate the scan
         pending_response_->asArray()[0].asString() = "0"; // Set cursor to "0" to indicate completion
@@ -728,10 +731,6 @@ const auto redis_response_cursor = value->asArray()[0].asString();
           fmt::format("finished with {} error(s)", error_count_)));
     }
   }
-}
-bool ScanRequest::isScanCompleteForShard(
-    uint32_t index, Envoy::Extensions::NetworkFilters::Common::Redis::RespValuePtr&& value) {
-  return value->asArray()[0].asString() == "0";
 }
 
 bool ScanRequest::isScanCompleteForCluster(
@@ -941,7 +940,7 @@ SplitRequestPtr TransactionRequest::create(Router& router,
     transaction.connection_established_ = true;
   }
 
-  return request_ptr;
+  return request_ptr; 
 }
 
 InstanceImpl::InstanceImpl(RouterPtr&& router, Stats::Scope& scope, const std::string& stat_prefix,
