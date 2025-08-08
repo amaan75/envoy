@@ -322,6 +322,9 @@ private:
       : FragmentedRequest(callbacks, command_stats, time_source, delay_command_latency) {}
   // RedisProxy::CommandSplitter::FragmentedRequest
   void onChildResponse(Common::Redis::RespValuePtr&& value, uint32_t index) override;
+
+ protected:
+  uint32_t shardsize_; 
 };
 
 /**
@@ -451,7 +454,7 @@ private:
   CommandHandlerFactory<MGETRequest> mget_handler_;
   CommandHandlerFactory<MSETRequest> mset_handler_;
   CommandHandlerFactory<KeysRequest> keys_handler_;
-  CommandHandlerFactory<ScanKeysRequest> scan_handler_;
+  CommandHandlerFactory<ScanRequest> scan_handler_;
   CommandHandlerFactory<SplitKeysSumResultRequest> split_keys_sum_result_handler_;
   CommandHandlerFactory<TransactionRequest> transaction_handler_;
   TrieLookupTable<HandlerDataPtr> handler_lookup_table_;

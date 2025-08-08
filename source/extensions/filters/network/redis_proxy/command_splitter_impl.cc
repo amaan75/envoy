@@ -593,12 +593,11 @@ SplitRequestPtr ScanRequest::create(Router& router, Common::Redis::RespValuePtr&
                                    TimeSource& time_source, bool delay_command_latency,
                                    const StreamInfo::StreamInfo& stream_info) {
   // SCAN cursor [MATCH pattern] [COUNT count] [TYPE type]
-  if (incoming_request->asArray().size() < 2) {
+  if (incoming_request->asArray().size() < 2 || incoming_request->asArray().size() > 8) {
     onWrongNumberOfArguments(callbacks, *incoming_request);
     command_stats.error_.inc();
     return nullptr;
   }
-  
   // For routing, use empty string since SCAN doesn't target a specific key
   std::string empty_key = "";
   const auto route = router.upstreamPool(empty_key, stream_info);
@@ -612,7 +611,7 @@ SplitRequestPtr ScanRequest::create(Router& router, Common::Redis::RespValuePtr&
 
   std::unique_ptr<ScanRequest> request_ptr{
       new ScanRequest(callbacks, command_stats, time_source, delay_command_latency)};
-  request_ptr->num_pending_responses_ = shard_size;
+  request_ptr->num_pending_responses_ = 1;
   request_ptr->pending_requests_.reserve(request_ptr->num_pending_responses_);
 
   // Initialize response as [cursor, [keys]]
@@ -628,7 +627,7 @@ SplitRequestPtr ScanRequest::create(Router& router, Common::Redis::RespValuePtr&
   request_ptr->pending_response_->asArray()[1].type(Common::Redis::RespType::Array);
 
   Common::Redis::RespValueSharedPtr base_request = std::move(incoming_request);
-  for (uint32_t shard_index = 0; shard_index < shard_size; shard_index++) {
+
     request_ptr->pending_requests_.emplace_back(*request_ptr, shard_index);
     PendingRequest& pending_request = request_ptr->pending_requests_.back();
 
@@ -639,7 +638,7 @@ SplitRequestPtr ScanRequest::create(Router& router, Common::Redis::RespValuePtr&
     if (!pending_request.handle_) {
       pending_request.onResponse(Common::Redis::Utility::makeError(Response::get().NoUpstreamHost));
     }
-  }
+  
 
   if (request_ptr->num_pending_responses_ > 0) {
     return request_ptr;
@@ -655,6 +654,11 @@ void ScanRequest::onChildResponse(Common::Redis::RespValuePtr&& value, uint32_t 
     // Expected format: [cursor, [keys]]
     if (value->asArray().size() == 2 && 
         value->asArray()[1].type() == Common::Redis::RespType::Array) {
+          if(index < )
+    // Expected response format: [cursor, [keys]]
+    pending_response_->asArray()[0].asString()= value->asArray()[0].asString()+"::" + std::to_string(index);
+    pending_response_->asArray()[1].asArray().insert(pending_response_->asArray()[1].asArray().end(),
+                                        value->asArray().begin(), value->asArray().end());
       
       // If any shard returns a non-zero cursor, set our cursor to non-zero
       if (value->asArray()[0].type() == Common::Redis::RespType::BulkString &&
