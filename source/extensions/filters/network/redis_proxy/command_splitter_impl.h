@@ -323,7 +323,11 @@ private:
   // RedisProxy::CommandSplitter::FragmentedRequest
   void onChildResponse(Common::Redis::RespValuePtr&& value, uint32_t index) override;
 
- protected:
+  bool
+  isScanCompleteForCluster(uint32_t index,
+                           Envoy::Extensions::NetworkFilters::Common::Redis::RespValuePtr&& value);
+
+protected:
   uint32_t shardsize_; 
 };
 

@@ -4,6 +4,7 @@
 
 #include "source/common/common/logger.h"
 #include "source/extensions/filters/network/common/redis/supported_commands.h"
+#include "command_splitter_impl.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -598,6 +599,28 @@ SplitRequestPtr ScanRequest::create(Router& router, Common::Redis::RespValuePtr&
     command_stats.error_.inc();
     return nullptr;
   }
+  const auto cursor = incoming_request->asArray()[1].asString();
+   uint32_t shard_index = 0;
+  //if the cursor is "0", it means that this is the begining of a scan, else this might be a continuation and we should modify the existing cursor 
+  // and extract the shard index from it, finally send the correct cursor to the shard.
+  if(  cursor == "0") {
+   //do nothing, this is the first scan request
+    ENVOY_LOG(debug, "scan request with cursor '0', starting a new scan");
+  }else{
+    // Extract the shard index from the cursor, which is expected to be in the format "0::<shard_index>"
+    size_t pos = cursor.find("::");
+    if (pos == std::string::npos) {
+      callbacks.onResponse(Common::Redis::Utility::makeError(Response::get().InvalidRequest));
+      command_stats.error_.inc();
+      return nullptr;
+    }
+    // Extract the shard index
+    std::string shard_index_str = cursor.substr(pos + 2);
+    shard_index = std::stoul(shard_index_str);
+    // strip the cursor of the shard index
+    incoming_request->asArray()[1].asString() = cursor.substr(0, pos);
+     ENVOY_LOG(debug, "Stripped cursor: {}", incoming_request->asArray()[1].asString());
+  }
   // For routing, use empty string since SCAN doesn't target a specific key
   std::string empty_key = "";
   const auto route = router.upstreamPool(empty_key, stream_info);
@@ -647,16 +670,29 @@ SplitRequestPtr ScanRequest::create(Router& router, Common::Redis::RespValuePtr&
   return nullptr;
 }
 
+/**
+ * handle the response from a shard/node for a scan command.
+ * The expected response format is [cursor, [keys]].
+ * The scan is complete when index + 1 == shardsize_ and the cursor is "0".
+ * otherwise, when an individual shard returns a "0" cursor, it means that the scan is complete for the shard and the response modify the cursor string and send 
+ * back :: <shard_index>. as the cursor to the client via the pending_response_.
+ */
 void ScanRequest::onChildResponse(Common::Redis::RespValuePtr&& value, uint32_t index) {
   pending_requests_[index].handle_ = nullptr;
   switch (value->type()) {
   case Common::Redis::RespType::Array: {
-    // Expected format: [cursor, [keys]]
+    // Expected response format: [cursor, [keys]]
     if (value->asArray().size() == 2 && 
         value->asArray()[1].type() == Common::Redis::RespType::Array) {
-          if(index < )
-    // Expected response format: [cursor, [keys]]
+      if (isScanCompleteForCluster(index, value)) {
+        // time to terminate the scan
+        pending_response_->asArray()[0].asString() = "0"; // Set cursor to "0" to indicate completion
+      }else{
+        // If the scan is not complete, set the cursor to the next index
+     
     pending_response_->asArray()[0].asString()= value->asArray()[0].asString()+"::" + std::to_string(index);
+      }
+   
     pending_response_->asArray()[1].asArray().insert(pending_response_->asArray()[1].asArray().end(),
                                         value->asArray().begin(), value->asArray().end());
       
@@ -694,6 +730,10 @@ void ScanRequest::onChildResponse(Common::Redis::RespValuePtr&& value, uint32_t 
   }
 }
 
+bool ScanRequest::isScanCompleteForCluster(
+    uint32_t index, Envoy::Extensions::NetworkFilters::Common::Redis::RespValuePtr&& value) {
+  return index + 1 == shardsize_ && value->asArray()[0].asString() == "0";
+}
 SplitRequestPtr
 SplitKeysSumResultRequest::create(Router& router, Common::Redis::RespValuePtr&& incoming_request,
                                   SplitCallbacks& callbacks, CommandStats& command_stats,
