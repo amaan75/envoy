@@ -705,7 +705,7 @@ const auto redis_response_cursor = value->asArray()[0].asString();
       }
    
     pending_response_->asArray()[1].asArray().insert(pending_response_->asArray()[1].asArray().end(),
-                                        value->asArray().begin(), value->asArray().end());
+                                        value->asArray()[1].begin(), value->asArray()[1].end());
       
    
       
